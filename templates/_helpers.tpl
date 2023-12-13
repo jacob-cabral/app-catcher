@@ -41,22 +41,3 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
-
-{{/*
-Selector labels
-*/}}
-{{- define "app-catcher.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "app-catcher.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
-
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "app-catcher.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "app-catcher.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
