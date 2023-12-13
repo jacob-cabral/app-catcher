@@ -1,0 +1,26 @@
+{{- define "app-catcher.initcontainer" }}
+- name: {{ include "app-catcher.name" . }}
+  env:
+    - name: REPOSITORY
+      value: {{ .Values.catcher.app.repository }}
+    - name: TAG
+      value: {{ .Values.catcher.app.tag }}
+    - name: STRIP_COMPONENTS
+      value: {{ default "1" (.Values.catcher.app.stripComponents | quote) }}
+  command:
+    - sh
+  args:
+    - /usr/local/bin/entrypoint.sh
+  workingDir: /app
+  securityContext:
+    {{- toYaml .Values.catcher.securityContext | nindent 12 }}
+  image: "{{ default "alpine/curl" .Values.catcher.image.repository }}:{{ default .Chart.AppVersion .Values.catcher.image.tag }}"
+  imagePullPolicy: {{ .Values.catcher.image.pullPolicy }}
+  resources:
+    {{- toYaml .Values.catcher.resources | nindent 12 }}
+  volumeMounts:
+    - name: {{ include "app-catcher.fullname" . }}-entrypoint
+      mountPath: /usr/local/bin
+    - name: {{ .Values.catcher.volume }}
+      mountPath: /app
+{{- end -}}

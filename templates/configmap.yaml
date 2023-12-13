@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "app-catcher.fullname" . }}-entrypoint
+  labels:
+    {{- include "app-catcher.labels" . | nindent 4 }}
+data:
+  entrypoint.sh: |
+    #!/bin/bash
+    set -e
+
+    isNotNull() {
+      variableName=$1
+
+      if test -z "${variableName}"
+      then
+        echo "The variable name is required."
+        exit 1
+      else
+        variableValue="${!variableName}"
+
+        if test -z "${variableValue}"
+        then
+          echo "The ${variableName} is required."
+          exit 1
+        fi
+      fi
+    }
+
+    isInteger() {
+      variableName=$1
+      isNotNull ${variableName}
+      variableValue="${!variableName}"
+
+      if [[ ! "${variableValue}" =~ ^[0-9]+$ ]]
+      then
+        echo "Invalid type! The value of the variable ${variableName} must be an integer."
+        exit 1
+      fi
+    }
+
+    deleteCatched() {
+      rm -rf ./*
+    }
+
+    catch() {
+      repository=$1
+      tag=$2
+      tarballFile=$3
+
+      isNotNull repository
+      isNotNull tag
+      isNotNull tarballFile
+
+      tagDetails=$(curl \
+        --location \
+        --header "Accept: application/vnd.github+json" \
+        --header "X-GitHub-Api-Version: 2022-11-28" \
+        https://api.github.com/repos/${repository}/releases/tags/${tag})
+      tarballUrl=$(echo ${tagDetails} | jq -r .tarball_url)
+
+      curl --location --output $tarballFile ${tarballUrl}
+    }
+
+    extract() {
+      tarballFile=$1
+      stripComponents=$2
+      isNotNull tarballFile
+      isInteger stripComponents
+      tar --extract --gunzip --strip-components=${stripComponents} --file=${tarballFile}
+    }
+
+    # FIXME Adicionar o jq à imagem Docker.
+    solveDependency() {
+      if test -z "$(which jq)"
+      then
+        apk add jq
+      fi
+    }
+
+    main() {
+      isNotNull REPOSITORY
+      isNotNull TAG
+      isNotNull STRIP_COMPONENTS
+
+      tarballFile=${TAG}.tar.gz
+
+      if test ! -f "${tarballFile}"
+      then
+        solveDependency
+        deleteCatched
+        catch ${REPOSITORY} ${TAG} ${tarballFile}
+        extract ${tarballFile} ${STRIP_COMPONENTS}
+      else
+        echo "Already catched!"
+      fi
+    }
+
+    main
