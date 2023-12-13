@@ -1,0 +1,6 @@
+{{- define "app-catcher.volume" }}
+- name: {{ include "app-catcher.fullname" . }}-entrypoint
+  configMap:
+    name: {{ include "app-catcher.fullname" . }}-entrypoint
+    defaultMode: 0550
+{{- end -}}
